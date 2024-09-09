@@ -102,6 +102,8 @@ func (p *INIParser) Set(section, key, newValue string) (string, error) {
 		return state, fmt.Errorf("value not added, section or key not found")
 	}
 
+	p.Data[section][key] = newValue
+
 	state = "added"
 	return state, nil
 
