@@ -106,3 +106,20 @@ func (p INIParser) Set(section, key, newValue string) (string, error) {
 	return state, nil
 
 }
+
+func (p INIParser) ToString() (string, error) {
+	if len(p.Data) == 0 {
+		return "", fmt.Errorf("there is no data to convert to string")
+	}
+
+	output := ""
+	for section, keyValue := range p.Data {
+		output += "[" + section + "]" + "\n"
+
+		for key, value := range keyValue {
+			output += key + "=" + value + "\n"
+		}
+	}
+
+	return output, nil
+}

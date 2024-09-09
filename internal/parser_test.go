@@ -8,16 +8,18 @@ import (
 func TestLoadFromString(t *testing.T) {
 	t.Run("valid ini data", func(t *testing.T) {
 		p := INIParser{}
-		got, err := p.LoadFromString(`; last modified 1 April 2001 by John Doe
-[owner]
-name = John Doe
-organization = Acme Widgets Inc.
+		got, err := p.LoadFromString(
+			`; last modified 1 April 2001 by John Doe
+			[owner]
+			name = John Doe
+			organization = Acme Widgets Inc.
 
-[database]
-# use IP address in case network name resolution is not working
-server = 192.0.2.62
-port = 143
-file = payroll.dat`)
+			[database]
+			# use IP address in case network name resolution is not working
+			server = 192.0.2.62
+			port = 143
+			file = payroll.dat`)
+
 		want := MapOfMaps{
 			"owner":    {"name": "JohnDoe", "organization": "AcmeWidgetsInc."},
 			"database": {"server": "192.0.2.62", "port": "143", "file": "payroll.dat"},
@@ -34,16 +36,17 @@ file = payroll.dat`)
 
 	t.Run("invalid line format", func(t *testing.T) {
 		p := INIParser{}
-		_, err := p.LoadFromString(`; last modified 1 April 2001 by John Doe
-[owner]
-name =
-organization = Acme Widgets Inc.
+		_, err := p.LoadFromString(
+			`; last modified 1 April 2001 by John Doe
+			[owner]
+			name =
+			organization = Acme Widgets Inc.
 
-[database]
-# use IP address in case network name resolution is not working
-server = 192.0.2.62
-port = 143
-file = payroll.dat`)
+			[database]
+			# use IP address in case network name resolution is not working
+			server = 192.0.2.62
+			port = 143
+			file = payroll.dat`)
 
 		if err == nil {
 			t.Errorf("expected error 'invalid line format', got: %v", err)
@@ -52,16 +55,17 @@ file = payroll.dat`)
 
 	t.Run("key-value pain outside section", func(t *testing.T) {
 		p := INIParser{}
-		_, err := p.LoadFromString(`; last modified 1 April 2001 by John Doe
+		_, err := p.LoadFromString(
+			`; last modified 1 April 2001 by John Doe
 
-name = John Doe
-organization = Acme Widgets Inc.
+			name = John Doe
+			organization = Acme Widgets Inc.
 
-[database]
-# use IP address in case network name resolution is not working
-server = 192.0.2.62
-port = 143
-file = payroll.dat`)
+			[database]
+			# use IP address in case network name resolution is not working
+			server = 192.0.2.62
+			port = 143
+			file = payroll.dat`)
 
 		if err == nil {
 			t.Errorf("expected error 'key-value pair found outside of a section', got: %v", err)
@@ -222,4 +226,35 @@ func TestSet(t *testing.T) {
 		}
 
 	})
+}
+
+func TestToString(t *testing.T) {
+	t.Run("non empty map", func(t *testing.T) {
+		p := INIParser{
+			Data: MapOfMaps{
+				"owner":    {"name": "JohnDoe", "organization": "AcmeWidgetsInc."},
+				"database": {"server": "192.0.2.62", "port": "143", "file": "payroll.dat"},
+			},
+		}
+		got, err := p.ToString()
+		want := "[owner]\nname=JohnDoe\norganization=AcmeWidgetsInc.\n[database]\nserver=192.0.2.62\nport=143\nfile=payroll.dat\n"
+
+		if err != nil {
+			t.Fail()
+		}
+
+		if got != want {
+			t.Errorf("got: %v want: %v", got, want)
+		}
+	})
+
+	t.Run("empty map", func(t *testing.T) {
+		p := INIParser{}
+		_, err := p.ToString()
+
+		if err == nil {
+			t.Errorf("expected error 'there is no data to convert to string', got: %v", err)
+		}
+	})
+
 }
