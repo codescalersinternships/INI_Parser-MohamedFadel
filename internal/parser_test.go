@@ -182,3 +182,44 @@ func TestGet(t *testing.T) {
 		}
 	})
 }
+
+func TestSet(t *testing.T) {
+	t.Run("section and key do exist", func(t *testing.T) {
+		p := INIParser{
+			Data: MapOfMaps{
+				"owner":    {"name": "JohnDoe", "organization": "AcmeWidgetsInc."},
+				"database": {"server": "192.0.2.62", "port": "143", "file": "payroll.dat"},
+			},
+		}
+
+		got, err := p.Set("owner", "name", "WalterWhite")
+		want := "added"
+
+		if err != nil {
+			t.Fail()
+		}
+
+		if got != want {
+			t.Errorf("got: %v want: %v", got, want)
+		}
+	})
+
+	t.Run("section or key does not exist", func(t *testing.T) {
+		p := INIParser{
+			Data: MapOfMaps{
+				"database": {"server": "192.0.2.62", "port": "143", "file": "payroll.dat"},
+			},
+		}
+		got, err := p.Set("owner", "name", "WalterWhite")
+		want := "not added"
+
+		if err == nil {
+			t.Errorf("expected error 'value not added, section or key not found', got: %v", err)
+		}
+
+		if got != want {
+			t.Errorf("got: %v want: %v", got, want)
+		}
+
+	})
+}

@@ -92,3 +92,17 @@ func (p INIParser) Get(section, key string) (string, error) {
 
 	return value, nil
 }
+
+func (p INIParser) Set(section, key, newValue string) (string, error) {
+	state := ""
+	_, exists := p.Data[section][key]
+
+	if !exists {
+		state = "not added"
+		return state, fmt.Errorf("value not added, section or key not found")
+	}
+
+	state = "added"
+	return state, nil
+
+}
