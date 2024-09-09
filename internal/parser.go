@@ -63,3 +63,16 @@ func LoadFromFile(path string) (MapOfMaps, error) {
 
 	return LoadFromString(dataToString)
 }
+
+func GetSectionNames(data MapOfMaps) ([]string, error) {
+	if len(data) == 0 {
+		return nil, fmt.Errorf("the map is empty")
+	}
+
+	sectionNames := make([]string, 0)
+	for section := range data {
+		sectionNames = append(sectionNames, section)
+	}
+	
+	return sectionNames, nil
+}

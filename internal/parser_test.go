@@ -92,3 +92,29 @@ func TestLoadFromFile(t *testing.T) {
 
 	})
 }
+
+func TestGetSectionNames(t *testing.T) {
+	t.Run("non empty map", func(t *testing.T) {
+		got, err := GetSectionNames(MapOfMaps{
+			"owner":    {"name": "JohnDoe", "organization": "AcmeWidgetsInc."},
+			"database": {"server": "192.0.2.62", "port": "143", "file": "payroll.dat"},
+		})
+		want := []string{"owner", "database"}
+
+		if err != nil {
+			t.Fail()
+		}
+
+		if !reflect.DeepEqual(got, want) {
+			t.Errorf("got: %v want: %v", got, want)
+		}
+	})
+
+	t.Run("empty map", func(t *testing.T) {
+		_, err := GetSectionNames(MapOfMaps{})
+
+		if err == nil || err.Error() != "the map is empty" {
+			t.Errorf("expected error 'the map is empty', got: %v", err)
+		}
+	})
+}
