@@ -147,3 +147,38 @@ func TestGetSections(t *testing.T) {
 	}
 
 }
+
+func TestGet(t *testing.T) {
+	t.Run("value exists", func(t *testing.T) {
+		p := INIParser{
+			Data: MapOfMaps{
+				"owner":    {"name": "JohnDoe", "organization": "AcmeWidgetsInc."},
+				"database": {"server": "192.0.2.62", "port": "143", "file": "payroll.dat"},
+			},
+		}
+		got, err := p.Get("owner", "name")
+		want := "JohnDoe"
+
+		if err != nil {
+			t.Fail()
+		}
+
+		if got != want {
+			t.Errorf("got: %v want: %v", got, want)
+		}
+	})
+
+	t.Run("value does not exist", func(t *testing.T) {
+		p := INIParser{
+			Data: MapOfMaps{
+				"owner":    {"name": "JohnDoe", "organization": "AcmeWidgetsInc."},
+				"database": {"server": "192.0.2.62", "port": "143", "file": "payroll.dat"},
+			},
+		}
+		_, err := p.Get("--", "--")
+
+		if err == nil {
+			t.Errorf("expected error 'value does not exist', got: %v", err)
+		}
+	})
+}

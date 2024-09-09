@@ -83,4 +83,12 @@ func (p INIParser) GetSections() MapOfMaps {
 	return p.Data
 }
 
+func (p INIParser) Get(section, key string) (string, error) {
+	value, exists := p.Data[section][key]
 
+	if !exists {
+		return "", fmt.Errorf("value does not exist")
+	}
+
+	return value, nil
+}
