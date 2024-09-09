@@ -66,3 +66,29 @@ file = payroll.dat`)
 	})
 
 }
+
+func TestLoadFromFile(t *testing.T) {
+	t.Run("valid file path", func(t *testing.T) {
+		got, err := LoadFromFile("../../../../INI.txt")
+		want := MapOfMaps{
+			"owner":    {"name": "JohnDoe", "organization": "AcmeWidgetsInc."},
+			"database": {"server": "192.0.2.62", "port": "143", "file": "payroll.dat"},
+		}
+
+		if err != nil {
+			t.Fail()
+		}
+
+		if !reflect.DeepEqual(got, want) {
+			t.Errorf("got %v want %v", got, want)
+		}
+	})
+
+	t.Run("invalid file path", func(t *testing.T) {
+		_, err := LoadFromFile("../../../INI.txt")
+		if err == nil || err.Error() != "error reading file" {
+			t.Errorf("expected error 'error reading file', got: %v", err)
+		}
+
+	})
+}

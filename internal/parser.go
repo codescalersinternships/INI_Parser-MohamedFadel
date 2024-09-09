@@ -2,6 +2,7 @@ package internal
 
 import (
 	"fmt"
+	"os"
 	"strings"
 )
 
@@ -43,15 +44,22 @@ func LoadFromString(data string) (MapOfMaps, error) {
 			value := trimmedLine[1]
 
 			parsedData[currentSection][key] = value
+
 		} else {
 			return nil, fmt.Errorf("key-value pair found outside of a section")
 		}
 
 	}
 
-	for _, kv := range parsedData {
-		fmt.Println(kv)
-	}
-
 	return parsedData, nil
+}
+
+func LoadFromFile(path string) (MapOfMaps, error) {
+	data, err := os.ReadFile(path)
+	if err != nil {
+		return nil, fmt.Errorf("error reading file")
+	}
+	dataToString := string(data)
+
+	return LoadFromString(dataToString)
 }
