@@ -73,6 +73,10 @@ func GetSectionNames(data MapOfMaps) ([]string, error) {
 	for section := range data {
 		sectionNames = append(sectionNames, section)
 	}
-	
+
 	return sectionNames, nil
+}
+
+func GetSections(data MapOfMaps) MapOfMaps {
+	return data
 }

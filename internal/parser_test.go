@@ -118,3 +118,20 @@ func TestGetSectionNames(t *testing.T) {
 		}
 	})
 }
+
+func TestGetSections(t *testing.T) {
+	got := GetSections(MapOfMaps{
+		"owner":    {"name": "JohnDoe", "organization": "AcmeWidgetsInc."},
+		"database": {"server": "192.0.2.62", "port": "143", "file": "payroll.dat"},
+	})
+
+	want := MapOfMaps{
+		"owner":    {"name": "JohnDoe", "organization": "AcmeWidgetsInc."},
+		"database": {"server": "192.0.2.62", "port": "143", "file": "payroll.dat"},
+	}
+
+	if !reflect.DeepEqual(got, want) {
+		t.Errorf("got: %v want: %v", got, want)
+	}
+
+}
