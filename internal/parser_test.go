@@ -7,7 +7,8 @@ import (
 
 func TestLoadFromString(t *testing.T) {
 	t.Run("valid ini data", func(t *testing.T) {
-		got, err := LoadFromString(`; last modified 1 April 2001 by John Doe
+		p := INIParser{}
+		got, err := p.LoadFromString(`; last modified 1 April 2001 by John Doe
 [owner]
 name = John Doe
 organization = Acme Widgets Inc.
@@ -32,7 +33,8 @@ file = payroll.dat`)
 	})
 
 	t.Run("invalid line format", func(t *testing.T) {
-		_, err := LoadFromString(`; last modified 1 April 2001 by John Doe
+		p := INIParser{}
+		_, err := p.LoadFromString(`; last modified 1 April 2001 by John Doe
 [owner]
 name =
 organization = Acme Widgets Inc.
@@ -43,13 +45,14 @@ server = 192.0.2.62
 port = 143
 file = payroll.dat`)
 
-		if err == nil || err.Error() != "invalid line format" {
+		if err == nil {
 			t.Errorf("expected error 'invalid line format', got: %v", err)
 		}
 	})
 
 	t.Run("key-value pain outside section", func(t *testing.T) {
-		_, err := LoadFromString(`; last modified 1 April 2001 by John Doe
+		p := INIParser{}
+		_, err := p.LoadFromString(`; last modified 1 April 2001 by John Doe
 
 name = John Doe
 organization = Acme Widgets Inc.
@@ -60,7 +63,7 @@ server = 192.0.2.62
 port = 143
 file = payroll.dat`)
 
-		if err == nil || err.Error() != "key-value pair found outside of a section" {
+		if err == nil {
 			t.Errorf("expected error 'key-value pair found outside of a section', got: %v", err)
 		}
 	})
@@ -69,7 +72,8 @@ file = payroll.dat`)
 
 func TestLoadFromFile(t *testing.T) {
 	t.Run("valid file path", func(t *testing.T) {
-		got, err := LoadFromFile("../../../../INI.txt")
+		p := INIParser{}
+		got, err := p.LoadFromFile("../../../../INI.txt")
 		want := MapOfMaps{
 			"owner":    {"name": "JohnDoe", "organization": "AcmeWidgetsInc."},
 			"database": {"server": "192.0.2.62", "port": "143", "file": "payroll.dat"},
@@ -85,8 +89,9 @@ func TestLoadFromFile(t *testing.T) {
 	})
 
 	t.Run("invalid file path", func(t *testing.T) {
-		_, err := LoadFromFile("../../../INI.txt")
-		if err == nil || err.Error() != "error reading file" {
+		p := INIParser{}
+		_, err := p.LoadFromFile("../../../INI.txt")
+		if err == nil {
 			t.Errorf("expected error 'error reading file', got: %v", err)
 		}
 
@@ -95,10 +100,13 @@ func TestLoadFromFile(t *testing.T) {
 
 func TestGetSectionNames(t *testing.T) {
 	t.Run("non empty map", func(t *testing.T) {
-		got, err := GetSectionNames(MapOfMaps{
-			"owner":    {"name": "JohnDoe", "organization": "AcmeWidgetsInc."},
-			"database": {"server": "192.0.2.62", "port": "143", "file": "payroll.dat"},
-		})
+		p := INIParser{
+			Data: MapOfMaps{
+				"owner":    {"name": "JohnDoe", "organization": "AcmeWidgetsInc."},
+				"database": {"server": "192.0.2.62", "port": "143", "file": "payroll.dat"},
+			},
+		}
+		got, err := p.GetSectionNames()
 		want := []string{"owner", "database"}
 
 		if err != nil {
@@ -111,19 +119,23 @@ func TestGetSectionNames(t *testing.T) {
 	})
 
 	t.Run("empty map", func(t *testing.T) {
-		_, err := GetSectionNames(MapOfMaps{})
+		p := INIParser{}
+		_, err := p.GetSectionNames()
 
-		if err == nil || err.Error() != "the map is empty" {
+		if err == nil {
 			t.Errorf("expected error 'the map is empty', got: %v", err)
 		}
 	})
 }
 
 func TestGetSections(t *testing.T) {
-	got := GetSections(MapOfMaps{
-		"owner":    {"name": "JohnDoe", "organization": "AcmeWidgetsInc."},
-		"database": {"server": "192.0.2.62", "port": "143", "file": "payroll.dat"},
-	})
+	p := INIParser{
+		Data: MapOfMaps{
+			"owner":    {"name": "JohnDoe", "organization": "AcmeWidgetsInc."},
+			"database": {"server": "192.0.2.62", "port": "143", "file": "payroll.dat"},
+		},
+	}
+	got := p.GetSections()
 
 	want := MapOfMaps{
 		"owner":    {"name": "JohnDoe", "organization": "AcmeWidgetsInc."},

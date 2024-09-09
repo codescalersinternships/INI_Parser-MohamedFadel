@@ -6,7 +6,7 @@ import (
 	"strings"
 )
 
-func LoadFromString(data string) (MapOfMaps, error) {
+func (p INIParser) LoadFromString(data string) (MapOfMaps, error) {
 	lines := strings.Split(data, "\n")
 	cleanLines := make([]string, 0)
 	parsedData := make(MapOfMaps)
@@ -50,33 +50,37 @@ func LoadFromString(data string) (MapOfMaps, error) {
 		}
 
 	}
+	p.Data = parsedData
 
-	return parsedData, nil
+	return p.Data, nil
 }
 
-func LoadFromFile(path string) (MapOfMaps, error) {
+func (p INIParser) LoadFromFile(path string) (MapOfMaps, error) {
 	data, err := os.ReadFile(path)
 	if err != nil {
-		return nil, fmt.Errorf("error reading file")
+		return nil, fmt.Errorf("error reading file %w", err)
 	}
 	dataToString := string(data)
 
-	return LoadFromString(dataToString)
+	return p.LoadFromString(dataToString)
 }
 
-func GetSectionNames(data MapOfMaps) ([]string, error) {
-	if len(data) == 0 {
+func (p INIParser) GetSectionNames() ([]string, error) {
+	p.SectionNames = []string{}
+
+	if len(p.Data) == 0 {
 		return nil, fmt.Errorf("the map is empty")
 	}
 
-	sectionNames := make([]string, 0)
-	for section := range data {
-		sectionNames = append(sectionNames, section)
+	for section := range p.Data {
+		p.SectionNames = append(p.SectionNames, section)
 	}
 
-	return sectionNames, nil
+	return p.SectionNames, nil
 }
 
-func GetSections(data MapOfMaps) MapOfMaps {
-	return data
+func (p INIParser) GetSections() MapOfMaps {
+	return p.Data
 }
+
+
