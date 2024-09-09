@@ -6,7 +6,7 @@ import (
 	"strings"
 )
 
-func (p INIParser) LoadFromString(data string) (MapOfMaps, error) {
+func (p *INIParser) LoadFromString(data string) (MapOfMaps, error) {
 	lines := strings.Split(data, "\n")
 	cleanLines := make([]string, 0)
 	parsedData := make(MapOfMaps)
@@ -55,7 +55,7 @@ func (p INIParser) LoadFromString(data string) (MapOfMaps, error) {
 	return p.Data, nil
 }
 
-func (p INIParser) LoadFromFile(path string) (MapOfMaps, error) {
+func (p *INIParser) LoadFromFile(path string) (MapOfMaps, error) {
 	data, err := os.ReadFile(path)
 	if err != nil {
 		return nil, fmt.Errorf("error reading file %w", err)
@@ -65,7 +65,7 @@ func (p INIParser) LoadFromFile(path string) (MapOfMaps, error) {
 	return p.LoadFromString(dataToString)
 }
 
-func (p INIParser) GetSectionNames() ([]string, error) {
+func (p *INIParser) GetSectionNames() ([]string, error) {
 	p.SectionNames = []string{}
 
 	if len(p.Data) == 0 {
@@ -79,11 +79,11 @@ func (p INIParser) GetSectionNames() ([]string, error) {
 	return p.SectionNames, nil
 }
 
-func (p INIParser) GetSections() MapOfMaps {
+func (p *INIParser) GetSections() MapOfMaps {
 	return p.Data
 }
 
-func (p INIParser) Get(section, key string) (string, error) {
+func (p *INIParser) Get(section, key string) (string, error) {
 	value, exists := p.Data[section][key]
 
 	if !exists {
@@ -93,7 +93,7 @@ func (p INIParser) Get(section, key string) (string, error) {
 	return value, nil
 }
 
-func (p INIParser) Set(section, key, newValue string) (string, error) {
+func (p *INIParser) Set(section, key, newValue string) (string, error) {
 	state := ""
 	_, exists := p.Data[section][key]
 
@@ -107,7 +107,7 @@ func (p INIParser) Set(section, key, newValue string) (string, error) {
 
 }
 
-func (p INIParser) ToString() (string, error) {
+func (p *INIParser) ToString() (string, error) {
 	if len(p.Data) == 0 {
 		return "", fmt.Errorf("there is no data to convert to string")
 	}
@@ -124,7 +124,7 @@ func (p INIParser) ToString() (string, error) {
 	return output, nil
 }
 
-func (p INIParser) SaveToFile(path string) (string, error) {
+func (p *INIParser) SaveToFile(path string) (string, error) {
 	state := "not saved"
 	if len(p.Data) == 0 {
 		return state, fmt.Errorf("there is no data to save to file")
