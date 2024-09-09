@@ -258,3 +258,62 @@ func TestToString(t *testing.T) {
 	})
 
 }
+
+func TestSaveToFile(t *testing.T) {
+	t.Run("non empty map and valid file path", func(t *testing.T) {
+		p := INIParser{
+			Data: MapOfMaps{
+				"owner":    {"name": "JohnDoe", "organization": "AcmeWidgetsInc."},
+				"database": {"server": "192.0.2.62", "port": "143", "file": "payroll.dat"},
+			},
+		}
+
+		got, err := p.SaveToFile("../../../../newINI.txt")
+		want := "saved"
+
+		if err != nil {
+			t.Fail()
+		}
+
+		if got != want {
+			t.Errorf("got: %v want: %v", got, want)
+		}
+	})
+
+	t.Run("empty map", func(t *testing.T) {
+		p := INIParser{}
+
+		got, err := p.SaveToFile("../../../../newINI.txt")
+		want := "not saved"
+
+		if err == nil {
+			t.Errorf("expected error 'there is no data to save to file', got: %v", err)
+		}
+
+		if got != want {
+			t.Errorf("got: %v want: %v", got, want)
+		}
+
+	})
+
+	t.Run("invalid file path", func(t *testing.T) {
+		p := INIParser{
+			Data: MapOfMaps{
+				"owner":    {"name": "JohnDoe", "organization": "AcmeWidgetsInc."},
+				"database": {"server": "192.0.2.62", "port": "143", "file": "payroll.dat"},
+			},
+		}
+
+		got, err := p.SaveToFile("")
+		want := "not saved"
+
+		if err == nil {
+			t.Errorf("expected error 'error writing to file', got: %v", err)
+		}
+
+		if got != want {
+			t.Errorf("got: %v want: %v", got, want)
+		}
+	})
+
+}

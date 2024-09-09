@@ -123,3 +123,20 @@ func (p INIParser) ToString() (string, error) {
 
 	return output, nil
 }
+
+func (p INIParser) SaveToFile(path string) (string, error) {
+	state := "not saved"
+	if len(p.Data) == 0 {
+		return state, fmt.Errorf("there is no data to save to file")
+	}
+
+	data, _ := p.ToString()
+	dataToBytes := []byte(data)
+	if err := os.WriteFile(path, dataToBytes, 0644); err != nil {
+		return state, fmt.Errorf("error writing to file %w", err)
+	}
+
+	state = "saved"
+	return state, nil
+
+}
