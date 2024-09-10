@@ -77,7 +77,7 @@ func TestLoadFromString(t *testing.T) {
 func TestLoadFromFile(t *testing.T) {
 	t.Run("valid file path", func(t *testing.T) {
 		p := INIParser{}
-		got, err := p.LoadFromFile("../../../../INI.txt")
+		got, err := p.LoadFromFile("./INI.txt")
 		want := MapOfMaps{
 			"owner":    {"name": "JohnDoe", "organization": "AcmeWidgetsInc."},
 			"database": {"server": "192.0.2.62", "port": "143", "file": "payroll.dat"},
