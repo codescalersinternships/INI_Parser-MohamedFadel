@@ -237,14 +237,14 @@ func TestToString(t *testing.T) {
 			},
 		}
 		got, err := p.ToString()
-		want := "[owner]\nname=JohnDoe\norganization=AcmeWidgetsInc.\n[database]\nserver=192.0.2.62\nport=143\nfile=payroll.dat\n"
+		want := "[owner]\nname=JohnDoe\norganization=AcmeWidgetsInc.\n[database]\nfile=payroll.dat\nport=143\nserver=192.0.2.62\n"
 
 		if err != nil {
 			t.Fail()
 		}
 
 		if got != want {
-			t.Errorf("got: %v want: %v", got, want)
+			t.Errorf("got: %v\nwant: %v", got, want)
 		}
 	})
 
@@ -256,7 +256,6 @@ func TestToString(t *testing.T) {
 			t.Errorf("expected error 'there is no data to convert to string', got: %v", err)
 		}
 	})
-
 }
 
 func TestSaveToFile(t *testing.T) {

@@ -3,6 +3,7 @@ package internal
 import (
 	"fmt"
 	"os"
+	"sort"
 	"strings"
 )
 
@@ -118,8 +119,15 @@ func (p *INIParser) ToString() (string, error) {
 	for section, keyValue := range p.Data {
 		output += "[" + section + "]" + "\n"
 
-		for key, value := range keyValue {
-			output += key + "=" + value + "\n"
+		// Sort keys
+		keys := make([]string, 0, len(keyValue))
+		for key := range keyValue {
+			keys = append(keys, key)
+		}
+		sort.Strings(keys)
+
+		for _, key := range keys {
+			output += key + "=" + keyValue[key] + "\n"
 		}
 	}
 
