@@ -1,3 +1,7 @@
+/*
+Package internal provides an INI parser with methods to load, manipulate, a
+nd save configuration data from INI formatted strings and files.
+*/
 package internal
 
 import (
@@ -7,6 +11,10 @@ import (
 	"strings"
 )
 
+/*
+LoadFromString parses an INI formatted string and loads the data into the parser.
+Returns the parsed data as a MapOfMaps or an error if the format is invalid.
+*/
 func (p *INIParser) LoadFromString(data string) (MapOfMaps, error) {
 	lines := strings.Split(data, "\n")
 	cleanLines := make([]string, 0)
@@ -16,10 +24,12 @@ func (p *INIParser) LoadFromString(data string) (MapOfMaps, error) {
 	for _, line := range lines {
 		line = strings.TrimSpace(line)
 
+		// Skip empty lines and comments
 		if line == "" || strings.HasPrefix(line, ";") || strings.HasPrefix(line, "#") {
 			continue
 		}
 
+		// Remove spaces if the line is not a section header
 		if !strings.HasPrefix(line, "[") {
 			line = strings.ReplaceAll(line, " ", "")
 		}
@@ -29,6 +39,7 @@ func (p *INIParser) LoadFromString(data string) (MapOfMaps, error) {
 	}
 
 	for _, line := range cleanLines {
+		// Detect section headers
 		if strings.HasPrefix(line, "[") && strings.HasSuffix(line, "]") {
 			currentSection = strings.Trim(line, "[]")
 
@@ -37,6 +48,7 @@ func (p *INIParser) LoadFromString(data string) (MapOfMaps, error) {
 		} else if currentSection != "" {
 			trimmedLine := strings.Split(line, "=")
 
+			// Check for valid key-value pair
 			if len(trimmedLine) != 2 || trimmedLine[0] == "" || trimmedLine[1] == "" {
 				return nil, fmt.Errorf("invalid line format")
 			}
@@ -56,6 +68,10 @@ func (p *INIParser) LoadFromString(data string) (MapOfMaps, error) {
 	return p.Data, nil
 }
 
+/*
+LoadFromFile reads an INI file from the specified path and loads the data into the parser.
+Returns the parsed data as a MapOfMaps or an error if the file cannot be read or parsed.
+*/
 func (p *INIParser) LoadFromFile(path string) (MapOfMaps, error) {
 	data, err := os.ReadFile(path)
 	if err != nil {
@@ -66,6 +82,10 @@ func (p *INIParser) LoadFromFile(path string) (MapOfMaps, error) {
 	return p.LoadFromString(dataToString)
 }
 
+/*
+GetSectionNames returns a list of section names from the loaded INI data.
+Returns an error if no data has been loaded.
+*/
 func (p *INIParser) GetSectionNames() ([]string, error) {
 	p.SectionNames = []string{}
 
@@ -80,10 +100,15 @@ func (p *INIParser) GetSectionNames() ([]string, error) {
 	return p.SectionNames, nil
 }
 
+// GetSections returns the entire parsed data as a MapOfMaps.
 func (p *INIParser) GetSections() MapOfMaps {
 	return p.Data
 }
 
+/*
+Get retrieves the value associated with the specified key in the given section.
+Returns the value or an error if the key does not exist.
+*/
 func (p *INIParser) Get(section, key string) (string, error) {
 	value, exists := p.Data[section][key]
 
@@ -94,6 +119,10 @@ func (p *INIParser) Get(section, key string) (string, error) {
 	return value, nil
 }
 
+/*
+Set updates the value of a specified key in a given section.
+Returns the status of the operation or an error if the section or key is not found.
+*/
 func (p *INIParser) Set(section, key, newValue string) (string, error) {
 	state := ""
 	_, exists := p.Data[section][key]
@@ -110,6 +139,10 @@ func (p *INIParser) Set(section, key, newValue string) (string, error) {
 
 }
 
+/*
+ToString converts the loaded INI data into a formatted string representation.
+Returns the formatted string or an error if no data has been loaded.
+*/
 func (p *INIParser) ToString() (string, error) {
 	if len(p.Data) == 0 {
 		return "", fmt.Errorf("there is no data to convert to string")
@@ -134,6 +167,10 @@ func (p *INIParser) ToString() (string, error) {
 	return output, nil
 }
 
+/*
+SaveToFile writes the loaded INI data to the specified file path.
+Returns the status of the save operation or an error if the file cannot be written.
+*/
 func (p *INIParser) SaveToFile(path string) (string, error) {
 	state := "not saved"
 	if len(p.Data) == 0 {
