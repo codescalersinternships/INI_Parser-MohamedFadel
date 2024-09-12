@@ -1,8 +1,8 @@
 /*
-Package internal provides an INI parser with methods to load, manipulate, a
+Package parser provides an INI parser with methods to load, manipulate, a
 nd save configuration data from INI formatted strings and files.
 */
-package internal
+package parser
 
 import (
 	"fmt"

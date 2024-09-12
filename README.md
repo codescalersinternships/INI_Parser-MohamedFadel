@@ -65,7 +65,7 @@ The `INI_Parser` project provides functionality to parse, modify, and save INI f
 ### Load INI Data from a String
 
 ```go
-p := INIParser{}
+p := parser.INIParser{}
 data, err := p.LoadFromString(`
 ; last modified 1 April 2001 by John Doe
 [owner]
@@ -81,7 +81,7 @@ file = payroll.dat
 
 ### Load INI Data from a File
 ```go
-p := INIParser{}
+p := parser.INIParser{}
 data, err := p.LoadFromFile("path/to/file.ini")
 ```
 

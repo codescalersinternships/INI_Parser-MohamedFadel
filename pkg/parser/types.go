@@ -1,4 +1,4 @@
-package internal
+package parser
 
 /*
 MapOfMaps represents the structure of the parsed INI data,
