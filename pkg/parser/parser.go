@@ -167,6 +167,15 @@ func (p *INIParser) ToString() (string, error) {
 	return output, nil
 }
 
+func (p *INIParser) String() string {
+	data, err := p.ToString()
+	if err != nil {
+		return "error: no data loaded"
+	}
+
+	return data
+}
+
 /*
 SaveToFile writes the loaded INI data to the specified file path.
 Returns the status of the save operation or an error if the file cannot be written.

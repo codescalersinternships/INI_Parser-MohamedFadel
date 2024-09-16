@@ -258,6 +258,33 @@ func TestToString(t *testing.T) {
 	})
 }
 
+func TestString(t *testing.T) {
+	t.Run("non empty map", func(t *testing.T) {
+		p := INIParser{
+			Data: MapOfMaps{
+				"owner":    {"name": "JohnDoe", "organization": "AcmeWidgetsInc."},
+				"database": {"server": "192.0.2.62", "port": "143", "file": "payroll.dat"},
+			},
+		}
+		got := p.String()
+		want := "[owner]\nname=JohnDoe\norganization=AcmeWidgetsInc.\n[database]\nfile=payroll.dat\nport=143\nserver=192.0.2.62\n"
+
+		if got != want {
+			t.Errorf("got: %v\nwant: %v", got, want)
+		}
+	})
+
+	t.Run("empty map", func(t *testing.T) {
+		p := INIParser{}
+		got := p.String()
+		want := "error: no data loaded"
+
+		if got != want {
+			t.Errorf("got: %v\nwant: %v", got, want)
+		}
+	})
+}
+
 func TestSaveToFile(t *testing.T) {
 	t.Run("non empty map and valid file path", func(t *testing.T) {
 		p := INIParser{
