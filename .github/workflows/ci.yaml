@@ -1,0 +1,42 @@
+name: CI Pipeline
+
+on:
+  pull_request:
+    branches:
+      - main
+  push:
+    branches:
+      - main
+
+jobs:
+  golangci:
+    name: Lint
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-go@v5
+        with:
+          go-version: stable
+      - name: Run golangci-lint
+        uses: golangci/golangci-lint-action@v6
+        with:
+          version: v1.60
+
+  test:
+    name: Test
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-go@v5
+        with:
+          go-version: stable
+      - name: Install Dependencies
+        run: go mod tidy
+      - name: Run Tests
+        run: go test ./pkg/parser/... -v -coverprofile=coverage.out
+      - name: Upload Test Coverage
+        if: success() && steps.test.outcome == 'success'
+        uses: actions/upload-artifact@v3
+        with:
+          name: coverage
+          path: internal/coverage.out
