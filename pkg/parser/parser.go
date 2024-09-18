@@ -13,13 +13,12 @@ import (
 
 /*
 LoadFromString parses an INI formatted string and loads the data into the parser.
-Returns the parsed data as a MapOfMaps or an error if the format is invalid.
+It returns an error if the format is invalid.
 */
-func (p *INIParser) LoadFromString(data string) (MapOfMaps, error) {
+func (p *INIParser) LoadFromString(data string) error {
 	lines := strings.Split(data, "\n")
-	cleanLines := make([]string, 0)
-	parsedData := make(MapOfMaps)
 	var currentSection string
+	parsedData := make(MapOfMaps)
 
 	for _, line := range lines {
 		line = strings.TrimSpace(line)
@@ -29,53 +28,52 @@ func (p *INIParser) LoadFromString(data string) (MapOfMaps, error) {
 			continue
 		}
 
-		// Remove spaces if the line is not a section header
-		if !strings.HasPrefix(line, "[") {
-			line = strings.ReplaceAll(line, " ", "")
-		}
+		// Detect section headers (e.g., [section])
+		if strings.HasPrefix(line, "[") || strings.HasSuffix(line, "]") {
+			// Validate if section header is well-formed (e.g., [section])
+			if len(line) < 3 || strings.Count(line, "[") != 1 || strings.Count(line, "]") != 1 {
+				return fmt.Errorf("%w: %s", ErrInvalidSectionHeader, line)
+			}
 
-		cleanLines = append(cleanLines, line)
-
-	}
-
-	for _, line := range cleanLines {
-		// Detect section headers
-		if strings.HasPrefix(line, "[") && strings.HasSuffix(line, "]") {
+			// Extract section name
 			currentSection = strings.Trim(line, "[]")
+
+			if _, exists := parsedData[currentSection]; exists {
+				return fmt.Errorf("%w: %s", ErrSectionAlreadyExists, currentSection)
+			}
 
 			parsedData[currentSection] = make(map[string]string)
 
 		} else if currentSection != "" {
-			trimmedLine := strings.Split(line, "=")
+			trimmedLine := strings.SplitN(line, "=", 2)
 
-			// Check for valid key-value pair
-			if len(trimmedLine) != 2 || trimmedLine[0] == "" || trimmedLine[1] == "" {
-				return nil, fmt.Errorf("invalid line format")
+			// Check if it's a valid key-value pair (the key must be non-empty)
+			if len(trimmedLine) != 2 || strings.TrimSpace(trimmedLine[0]) == "" {
+				return fmt.Errorf("%w: %s", ErrInvalidLineFormat, line)
 			}
 
-			key := trimmedLine[0]
-			value := trimmedLine[1]
+			// Trim spaces around key and value
+			key := strings.TrimSpace(trimmedLine[0])
+			value := strings.TrimSpace(trimmedLine[1])
 
 			parsedData[currentSection][key] = value
-
 		} else {
-			return nil, fmt.Errorf("key-value pair found outside of a section")
+			return fmt.Errorf("%w: %s", ErrKeyValuePairOutsideSection, line)
 		}
-
 	}
-	p.Data = parsedData
 
-	return p.Data, nil
+	p.data = parsedData
+	return nil
 }
 
 /*
 LoadFromFile reads an INI file from the specified path and loads the data into the parser.
-Returns the parsed data as a MapOfMaps or an error if the file cannot be read or parsed.
+Returns an error if the file cannot be read or parsed.
 */
-func (p *INIParser) LoadFromFile(path string) (MapOfMaps, error) {
+func (p *INIParser) LoadFromFile(path string) error {
 	data, err := os.ReadFile(path)
 	if err != nil {
-		return nil, fmt.Errorf("error reading file %w", err)
+		return fmt.Errorf("%w: %v", ErrFileReadError, err)
 	}
 	dataToString := string(data)
 
@@ -84,75 +82,60 @@ func (p *INIParser) LoadFromFile(path string) (MapOfMaps, error) {
 
 /*
 GetSectionNames returns a list of section names from the loaded INI data.
-Returns an error if no data has been loaded.
+If no data is present, it will return an empty list.
 */
-func (p *INIParser) GetSectionNames() ([]string, error) {
-	p.SectionNames = []string{}
+func (p *INIParser) GetSectionNames() []string {
+	sectionNames := make([]string, 0, len(p.data))
 
-	if len(p.Data) == 0 {
-		return nil, fmt.Errorf("the map is empty")
+	for section := range p.data {
+		sectionNames = append(sectionNames, section)
 	}
 
-	for section := range p.Data {
-		p.SectionNames = append(p.SectionNames, section)
-	}
-
-	return p.SectionNames, nil
+	return sectionNames
 }
 
 // GetSections returns the entire parsed data as a MapOfMaps.
 func (p *INIParser) GetSections() MapOfMaps {
-	return p.Data
+	return p.data
 }
 
 /*
 Get retrieves the value associated with the specified key in the given section.
-Returns the value or an error if the key does not exist.
+Returns the value and a boolean indicating whether the key exists in the section.
+If the key exists, the boolean will be true; otherwise, it will be false.
 */
-func (p *INIParser) Get(section, key string) (string, error) {
-	value, exists := p.Data[section][key]
 
-	if !exists {
-		return "", fmt.Errorf("value does not exist")
-	}
-
-	return value, nil
+func (p *INIParser) Get(section, key string) (string, bool) {
+	value, exists := p.data[section][key]
+	return value, exists
 }
 
 /*
 Set updates the value of a specified key in a given section.
-Returns the status of the operation or an error if the section or key is not found.
+If the section does not exist, it will be created.
+If the key does not exist in the section, it will be added.
 */
-func (p *INIParser) Set(section, key, newValue string) (string, error) {
-	state := ""
-	_, exists := p.Data[section][key]
-
-	if !exists {
-		state = "not added"
-		return state, fmt.Errorf("value not added, section or key not found")
+func (p *INIParser) Set(section, key, newValue string) {
+	if _, sectionExists := p.data[section]; !sectionExists {
+		p.data[section] = make(map[string]string)
 	}
 
-	p.Data[section][key] = newValue
-
-	state = "added"
-	return state, nil
-
+	p.data[section][key] = newValue
 }
 
 /*
-ToString converts the loaded INI data into a formatted string representation.
-Returns the formatted string or an error if no data has been loaded.
+String implements the Stringer interface for INIParser.
+It converts the loaded INI data into a formatted string representation.
 */
-func (p *INIParser) ToString() (string, error) {
-	if len(p.Data) == 0 {
-		return "", fmt.Errorf("there is no data to convert to string")
+func (p *INIParser) String() string {
+	if len(p.data) == 0 {
+		return "there is no data to convert to string"
 	}
 
-	output := ""
-	for section, keyValue := range p.Data {
-		output += "[" + section + "]" + "\n"
+	var builder strings.Builder
+	for section, keyValue := range p.data {
+		builder.WriteString(fmt.Sprintf("[%s]\n", section))
 
-		// Sort keys
 		keys := make([]string, 0, len(keyValue))
 		for key := range keyValue {
 			keys = append(keys, key)
@@ -160,39 +143,23 @@ func (p *INIParser) ToString() (string, error) {
 		sort.Strings(keys)
 
 		for _, key := range keys {
-			output += key + "=" + keyValue[key] + "\n"
+			builder.WriteString(fmt.Sprintf("%s=%s\n", key, keyValue[key]))
 		}
 	}
 
-	return output, nil
-}
-
-func (p *INIParser) String() string {
-	data, err := p.ToString()
-	if err != nil {
-		return "error: no data loaded"
-	}
-
-	return data
+	return builder.String()
 }
 
 /*
 SaveToFile writes the loaded INI data to the specified file path.
-Returns the status of the save operation or an error if the file cannot be written.
+Returns an error if the file cannot be written.
 */
-func (p *INIParser) SaveToFile(path string) (string, error) {
-	state := "not saved"
-	if len(p.Data) == 0 {
-		return state, fmt.Errorf("there is no data to save to file")
+func (p *INIParser) SaveToFile(path string) error {
+	data := p.String()
+
+	if err := os.WriteFile(path, []byte(data), 0644); err != nil {
+		return fmt.Errorf("%w: %v", ErrFileWriteError, err)
 	}
 
-	data, _ := p.ToString()
-	dataToBytes := []byte(data)
-	if err := os.WriteFile(path, dataToBytes, 0644); err != nil {
-		return state, fmt.Errorf("error writing to file %w", err)
-	}
-
-	state = "saved"
-	return state, nil
-
+	return nil
 }

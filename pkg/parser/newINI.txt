@@ -1,7 +1,0 @@
-[database]
-file=payroll.dat
-port=143
-server=192.0.2.62
-[owner]
-name=WalterWhite
-organization=AcmeWidgetsInc.

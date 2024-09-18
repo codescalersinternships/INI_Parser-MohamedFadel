@@ -1,6 +1,8 @@
 package parser
 
 import (
+	"errors"
+	"path/filepath"
 	"reflect"
 	"testing"
 )
@@ -8,8 +10,8 @@ import (
 func TestLoadFromString(t *testing.T) {
 	t.Run("valid ini data", func(t *testing.T) {
 		p := INIParser{}
-		got, err := p.LoadFromString(
-			`; last modified 1 April 2001 by John Doe
+		err := p.LoadFromString(`
+			; last modified 1 April 2001 by John Doe
 			[owner]
 			name = John Doe
 			organization = Acme Widgets Inc.
@@ -21,42 +23,73 @@ func TestLoadFromString(t *testing.T) {
 			file = payroll.dat`)
 
 		want := MapOfMaps{
-			"owner":    {"name": "JohnDoe", "organization": "AcmeWidgetsInc."},
+			"owner":    {"name": "John Doe", "organization": "Acme Widgets Inc."},
 			"database": {"server": "192.0.2.62", "port": "143", "file": "payroll.dat"},
 		}
 
 		if err != nil {
-			t.Fail()
+			t.Errorf("unexpected error: %v", err)
 		}
 
-		if !reflect.DeepEqual(got, want) {
-			t.Errorf("got %v want %v", got, want)
+		if !reflect.DeepEqual(p.data, want) {
+			t.Errorf("got %v, want %v", p.data, want)
+		}
+	})
+
+	t.Run("invalid section header", func(t *testing.T) {
+		p := INIParser{}
+		err := p.LoadFromString(`
+			; last modified 1 April 2001 by John Doe
+			[owner]
+			name = John Doe
+
+			[database
+			server = 192.0.2.62
+			port = 143`)
+
+		if !errors.Is(err, ErrInvalidSectionHeader) {
+			t.Errorf("expected error %v, got: %v", ErrInvalidSectionHeader, err)
+		}
+	})
+
+	t.Run("section already exists", func(t *testing.T) {
+		p := INIParser{}
+		err := p.LoadFromString(`
+			; last modified 1 April 2001 by John Doe
+			[owner]
+			name = John Doe
+
+			[owner]
+			organization = Acme Widgets Inc.`)
+
+		if !errors.Is(err, ErrSectionAlreadyExists) {
+			t.Errorf("expected error %v, got: %v", ErrSectionAlreadyExists, err)
 		}
 	})
 
 	t.Run("invalid line format", func(t *testing.T) {
 		p := INIParser{}
-		_, err := p.LoadFromString(
-			`; last modified 1 April 2001 by John Doe
+		err := p.LoadFromString(`
+			; last modified 1 April 2001 by John Doe
 			[owner]
-			name =
+			name = John Doe
 			organization = Acme Widgets Inc.
 
 			[database]
 			# use IP address in case network name resolution is not working
 			server = 192.0.2.62
 			port = 143
-			file = payroll.dat`)
+			file`)
 
-		if err == nil {
-			t.Errorf("expected error 'invalid line format', got: %v", err)
+		if !errors.Is(err, ErrInvalidLineFormat) {
+			t.Errorf("expected error %v, got: %v", ErrInvalidLineFormat, err)
 		}
 	})
 
-	t.Run("key-value pain outside section", func(t *testing.T) {
+	t.Run("key-value pair outside section", func(t *testing.T) {
 		p := INIParser{}
-		_, err := p.LoadFromString(
-			`; last modified 1 April 2001 by John Doe
+		err := p.LoadFromString(`
+			; last modified 1 April 2001 by John Doe
 
 			name = John Doe
 			organization = Acme Widgets Inc.
@@ -67,8 +100,8 @@ func TestLoadFromString(t *testing.T) {
 			port = 143
 			file = payroll.dat`)
 
-		if err == nil {
-			t.Errorf("expected error 'key-value pair found outside of a section', got: %v", err)
+		if !errors.Is(err, ErrKeyValuePairOutsideSection) {
+			t.Errorf("expected error %v, got: %v", ErrKeyValuePairOutsideSection, err)
 		}
 	})
 
@@ -77,72 +110,71 @@ func TestLoadFromString(t *testing.T) {
 func TestLoadFromFile(t *testing.T) {
 	t.Run("valid file path", func(t *testing.T) {
 		p := INIParser{}
-		got, err := p.LoadFromFile("./INI.txt")
+		err := p.LoadFromFile("../../testdata/INI.txt")
+
 		want := MapOfMaps{
-			"owner":    {"name": "JohnDoe", "organization": "AcmeWidgetsInc."},
+			"owner":    {"name": "John Doe", "organization": "Acme Widgets Inc."},
 			"database": {"server": "192.0.2.62", "port": "143", "file": "payroll.dat"},
 		}
 
 		if err != nil {
-			t.Fail()
+			t.Fatalf("unexpected error: %v", err)
 		}
 
-		if !reflect.DeepEqual(got, want) {
-			t.Errorf("got %v want %v", got, want)
+		if !reflect.DeepEqual(p.data, want) {
+			t.Errorf("got %v, want %v", p.data, want)
 		}
 	})
 
 	t.Run("invalid file path", func(t *testing.T) {
 		p := INIParser{}
-		_, err := p.LoadFromFile("../../../INI.txt")
-		if err == nil {
-			t.Errorf("expected error 'error reading file', got: %v", err)
-		}
+		err := p.LoadFromFile(t.TempDir())
 
+		if !errors.Is(err, ErrFileReadError) {
+			t.Errorf("expected error %v, got: %v", ErrFileReadError, err)
+		}
 	})
 }
 
 func TestGetSectionNames(t *testing.T) {
-	t.Run("non empty map", func(t *testing.T) {
+	t.Run("non-empty map", func(t *testing.T) {
 		p := INIParser{
-			Data: MapOfMaps{
+			data: MapOfMaps{
 				"owner":    {"name": "JohnDoe", "organization": "AcmeWidgetsInc."},
 				"database": {"server": "192.0.2.62", "port": "143", "file": "payroll.dat"},
 			},
 		}
-		got, err := p.GetSectionNames()
+		got := p.GetSectionNames()
 		want := []string{"owner", "database"}
 
-		if err != nil {
-			t.Fail()
-		}
-
 		if !reflect.DeepEqual(got, want) {
-			t.Errorf("got: %v want: %v", got, want)
+			t.Errorf("got: %v, want: %v", got, want)
 		}
 	})
 
 	t.Run("empty map", func(t *testing.T) {
-		p := INIParser{}
-		_, err := p.GetSectionNames()
+		p := INIParser{
+			data: MapOfMaps{},
+		}
+		got := p.GetSectionNames()
 
-		if err == nil {
-			t.Errorf("expected error 'the map is empty', got: %v", err)
+		if len(got) != 0 {
+			t.Errorf("expected empty list, got: %v", got)
 		}
 	})
 }
 
 func TestGetSections(t *testing.T) {
 	p := INIParser{
-		Data: MapOfMaps{
-			"owner":    {"name": "JohnDoe", "organization": "AcmeWidgetsInc."},
+		data: MapOfMaps{
+			"owner":    {"name": "John Doe", "organization": "Acme Widgets Inc."},
 			"database": {"server": "192.0.2.62", "port": "143", "file": "payroll.dat"},
 		},
 	}
 	got := p.GetSections()
 
 	want := MapOfMaps{
-		"owner":    {"name": "JohnDoe", "organization": "AcmeWidgetsInc."},
+		"owner":    {"name": "John Doe", "organization": "Acme Widgets Inc."},
 		"database": {"server": "192.0.2.62", "port": "143", "file": "payroll.dat"},
 	}
 
@@ -155,34 +187,34 @@ func TestGetSections(t *testing.T) {
 func TestGet(t *testing.T) {
 	t.Run("value exists", func(t *testing.T) {
 		p := INIParser{
-			Data: MapOfMaps{
-				"owner":    {"name": "JohnDoe", "organization": "AcmeWidgetsInc."},
+			data: MapOfMaps{
+				"owner":    {"name": "John Doe", "organization": "Acme Widgets Inc."},
 				"database": {"server": "192.0.2.62", "port": "143", "file": "payroll.dat"},
 			},
 		}
-		got, err := p.Get("owner", "name")
-		want := "JohnDoe"
+		got, exists := p.Get("owner", "name")
+		want := "John Doe"
 
-		if err != nil {
-			t.Fail()
+		if !exists {
+			t.Errorf("expected key to exist, but it does not")
 		}
 
 		if got != want {
-			t.Errorf("got: %v want: %v", got, want)
+			t.Errorf("got: %v, want: %v", got, want)
 		}
 	})
 
 	t.Run("value does not exist", func(t *testing.T) {
 		p := INIParser{
-			Data: MapOfMaps{
-				"owner":    {"name": "JohnDoe", "organization": "AcmeWidgetsInc."},
+			data: MapOfMaps{
+				"owner":    {"name": "John Doe", "organization": "Acme Widgets Inc."},
 				"database": {"server": "192.0.2.62", "port": "143", "file": "payroll.dat"},
 			},
 		}
-		_, err := p.Get("--", "--")
+		_, exists := p.Get("owner", "age")
 
-		if err == nil {
-			t.Errorf("expected error 'value does not exist', got: %v", err)
+		if exists {
+			t.Errorf("expected key not to exist, but it does")
 		}
 	})
 }
@@ -190,84 +222,71 @@ func TestGet(t *testing.T) {
 func TestSet(t *testing.T) {
 	t.Run("section and key do exist", func(t *testing.T) {
 		p := INIParser{
-			Data: MapOfMaps{
-				"owner":    {"name": "JohnDoe", "organization": "AcmeWidgetsInc."},
+			data: MapOfMaps{
+				"owner":    {"name": "John Doe", "organization": "Acme Widgets Inc."},
 				"database": {"server": "192.0.2.62", "port": "143", "file": "payroll.dat"},
 			},
 		}
 
-		got, err := p.Set("owner", "name", "WalterWhite")
-		want := "added"
-
-		if err != nil {
-			t.Fail()
-		}
+		p.Set("owner", "name", "Walter White")
+		got := p.data["owner"]["name"]
+		want := "Walter White"
 
 		if got != want {
-			t.Errorf("got: %v want: %v", got, want)
+			t.Errorf("got: %v, want: %v", got, want)
 		}
 	})
 
-	t.Run("section or key does not exist", func(t *testing.T) {
+	t.Run("section does not exist", func(t *testing.T) {
 		p := INIParser{
-			Data: MapOfMaps{
+			data: MapOfMaps{
 				"database": {"server": "192.0.2.62", "port": "143", "file": "payroll.dat"},
 			},
 		}
-		got, err := p.Set("owner", "name", "WalterWhite")
-		want := "not added"
 
-		if err == nil {
-			t.Errorf("expected error 'value not added, section or key not found', got: %v", err)
-		}
+		p.Set("owner", "name", "Walter White")
+		got := p.data["owner"]["name"]
+		want := "Walter White"
 
 		if got != want {
-			t.Errorf("got: %v want: %v", got, want)
+			t.Errorf("got: %v, want: %v", got, want)
 		}
-
 	})
-}
 
-func TestToString(t *testing.T) {
-	t.Run("non empty map", func(t *testing.T) {
+	t.Run("key does not exist in existing section", func(t *testing.T) {
 		p := INIParser{
-			Data: MapOfMaps{
-				"owner":    {"name": "JohnDoe", "organization": "AcmeWidgetsInc."},
-				"database": {"server": "192.0.2.62", "port": "143", "file": "payroll.dat"},
+			data: MapOfMaps{
+				"database": {"server": "192.0.2.62", "port": "143"},
 			},
 		}
-		got, err := p.ToString()
-		want := "[owner]\nname=JohnDoe\norganization=AcmeWidgetsInc.\n[database]\nfile=payroll.dat\nport=143\nserver=192.0.2.62\n"
 
-		if err != nil {
-			t.Fail()
-		}
+		p.Set("database", "file", "payroll.dat")
+		got := p.data["database"]["file"]
+		want := "payroll.dat"
 
 		if got != want {
-			t.Errorf("got: %v\nwant: %v", got, want)
-		}
-	})
-
-	t.Run("empty map", func(t *testing.T) {
-		p := INIParser{}
-		_, err := p.ToString()
-
-		if err == nil {
-			t.Errorf("expected error 'there is no data to convert to string', got: %v", err)
+			t.Errorf("got: %v, want: %v", got, want)
 		}
 	})
 }
 
 func TestString(t *testing.T) {
-	t.Run("non empty map", func(t *testing.T) {
+	t.Run("non-empty map", func(t *testing.T) {
 		p := INIParser{
-			Data: MapOfMaps{
+			data: MapOfMaps{
 				"owner":    {"name": "JohnDoe", "organization": "AcmeWidgetsInc."},
 				"database": {"server": "192.0.2.62", "port": "143", "file": "payroll.dat"},
 			},
 		}
 		got := p.String()
-		want := "[owner]\nname=JohnDoe\norganization=AcmeWidgetsInc.\n[database]\nfile=payroll.dat\nport=143\nserver=192.0.2.62\n"
+		want := `[owner]
+name=JohnDoe
+organization=AcmeWidgetsInc.
+[database]
+file=payroll.dat
+port=143
+server=192.0.2.62
+`
 
 		if got != want {
 			t.Errorf("got: %v\nwant: %v", got, want)
@@ -277,7 +296,7 @@ func TestString(t *testing.T) {
 	t.Run("empty map", func(t *testing.T) {
 		p := INIParser{}
 		got := p.String()
-		want := "error: no data loaded"
+		want := "there is no data to convert to string"
 
 		if got != want {
 			t.Errorf("got: %v\nwant: %v", got, want)
@@ -286,60 +305,33 @@ func TestString(t *testing.T) {
 }
 
 func TestSaveToFile(t *testing.T) {
-	t.Run("non empty map and valid file path", func(t *testing.T) {
+	t.Run("valid file path", func(t *testing.T) {
 		p := INIParser{
-			Data: MapOfMaps{
+			data: MapOfMaps{
 				"owner":    {"name": "JohnDoe", "organization": "AcmeWidgetsInc."},
 				"database": {"server": "192.0.2.62", "port": "143", "file": "payroll.dat"},
 			},
 		}
 
-		got, err := p.SaveToFile("../../../../newINI.txt")
-		want := "saved"
-
+		testFilePath := filepath.Join(t.TempDir(), "newINI.txt")
+		err := p.SaveToFile(testFilePath)
 		if err != nil {
-			t.Fail()
-		}
-
-		if got != want {
-			t.Errorf("got: %v want: %v", got, want)
-		}
-	})
-
-	t.Run("empty map", func(t *testing.T) {
-		p := INIParser{}
-
-		got, err := p.SaveToFile("../../../../newINI.txt")
-		want := "not saved"
-
-		if err == nil {
-			t.Errorf("expected error 'there is no data to save to file', got: %v", err)
-		}
-
-		if got != want {
-			t.Errorf("got: %v want: %v", got, want)
+			t.Errorf("unexpected error: %v", err)
 		}
 
 	})
 
 	t.Run("invalid file path", func(t *testing.T) {
 		p := INIParser{
-			Data: MapOfMaps{
+			data: MapOfMaps{
 				"owner":    {"name": "JohnDoe", "organization": "AcmeWidgetsInc."},
 				"database": {"server": "192.0.2.62", "port": "143", "file": "payroll.dat"},
 			},
 		}
 
-		got, err := p.SaveToFile("")
-		want := "not saved"
-
-		if err == nil {
-			t.Errorf("expected error 'error writing to file', got: %v", err)
-		}
-
-		if got != want {
-			t.Errorf("got: %v want: %v", got, want)
+		err := p.SaveToFile(t.TempDir())
+		if !errors.Is(err, ErrFileWriteError) {
+			t.Errorf("expected error %v, got: %v", ErrFileWriteError, err)
 		}
 	})
-
 }
